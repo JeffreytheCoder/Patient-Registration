@@ -1,8 +1,9 @@
 import { React, useState } from 'react';
 import { makeStyles } from '@material-ui/core/styles';
-import { TextField, Dialog, FormLabel, Card, Button, FormControl, InputLabel, Input, FormHelperText } from '@material-ui/core';
+import { TextField, Card, Button, FormControl } from '@material-ui/core';
 import { KeyboardDatePicker } from "@material-ui/pickers";
-import { AccessTime } from "@material-ui/icons";
+import moment from 'moment';
+import axios from "axios";
 
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
@@ -14,6 +15,8 @@ import {
   AppointmentTooltip,
 } from '@devexpress/dx-react-scheduler-material-ui';
 import { ViewState } from '@devexpress/dx-react-scheduler';
+
+import { API_URL } from "../constant";
 
 const useStyles = makeStyles(() => ({
   card: {
@@ -51,31 +54,25 @@ const useStyles = makeStyles(() => ({
 export default function Form() {
   const classes = useStyles();
   const emailValidator = require("email-validator");
-  
   const currentDate = '2021-02-10';
-  // let appointments = [
-  //   { title: 'Mail New Leads for Follow Up', startDate: '2019-06-23T10:00' },
-  //   { title: 'Product Meeting', startDate: '2019-06-23T10:30', endDate: '2019-06-23T11:30' },
-  //   { title: 'Send Territory Sales Breakdown', startDate: '2019-06-23T12:35' },
-  // ];
 
   const [name, setName] = useState('');
-  const [birthDate, setBirthDate] = useState('1990/01/01');
+  const [birthDate, setBirthDate] = useState(new Date());
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [photos, setPhotos] = useState([]);
-
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [appointments, setAppointments] = useState([
     { title: 'Team meeting', startDate: '2021-02-10T08:30', endDate: '2021-02-10T09:00' },
     { title: 'Interview with new doctor', startDate: '2021-02-10T11:30', endDate: '2021-02-10T12:30'},
   ]);
-
-  // setAppointments({ title: 'Mail New Leads for Follow Up', startDate: '2019-06-23T10:00' },
-  // { title: 'Product Meeting', startDate: '2019-06-23T10:30', endDate: '2019-06-23T11:30' },
-  // { title: 'Send Territory Sales Breakdown', startDate: '2019-06-23T12:35' });
   
+  const handleDateChange = (birthDate) => {
+    setBirthDate(birthDate);
+    console.log(birthDate);
+  };
+
   const uploadPhotos = (photo) => {
     setPhotos(photos.concat(photo));
   }
@@ -85,21 +82,32 @@ export default function Form() {
     const start = currentDate + 'T' + startTime;
     const end = currentDate + 'T' + endTime;
     setAppointments(appointments.concat({title: appointmentTitle, startDate: start, endDate: end}));
-    console.log(appointments);
   }
 
   const handleSubmit = () => {
-    console.log(photos);
     if (!emailValidator.validate(email))
       alert("The email formatt is incorrect!");
-    else
-      alert(name + phone);
+    else {
+      const patientInfo = {
+        name: name,
+        birthDate: moment.utc(birthDate).format('YYYY/MM/DD'),
+        phone: phone,
+        email: email,
+        // photo: photos[0],
+        startTime: startTime,
+        endTime: endTime,
+      }
+      console.log(patientInfo);
+      axios.post(API_URL, patientInfo).then((res) => {
+        alert("Submit successfully!");
+        console.log(res.data);
+      }).catch((err) => {
+        alert("Submit failed!");
+        console.log(err);
+      })
+    }
   }
 
-  // const addAppointment = () => {
-  //   appointments.push({title: 'What Meeting', startDate: '2019-06-23T10:30', endDate: '2019-06-23T11:30'});
-  //   console.log(appointments);
-  // }
 
   return (
     <Card className={classes.card}>
@@ -114,8 +122,11 @@ export default function Form() {
             className={classes.input}
             placeholder="1990/01/01"
             value={birthDate}
-            onChange={birthDate => setBirthDate(birthDate)}
+            onChange={handleDateChange}
             format="yyyy/MM/dd"
+            KeyboardButtonProps={{
+              'aria-label': 'change date',
+            }}
           />
         </FormControl>
         <FormControl className={classes.formControl}>
@@ -144,7 +155,7 @@ export default function Form() {
         </FormControl>
         <FormControl className={classes.formControl}>
           <p> Make an appointment (see doctor's avaliability) 👇</p>
-          <TextField type="time" className={classes.input} label="Start time" value={startTime} onChange={e => setStartTime(e.target.value)} style={{'margin-bottom': '15px'}}></TextField>
+          <TextField type="time" className={classes.input} label="Start time" value={startTime} onChange={e => setStartTime(e.target.value)} style={{'marginBottom': '15px'}}></TextField>
           <TextField type="time" className={classes.input} label="End time" value={endTime} onChange={e => setEndTime(e.target.value)}></TextField>
           <Button className={classes.button} variant="contained" color="primary" onClick={addAppointment}>Add appointment</Button>
         </FormControl>
